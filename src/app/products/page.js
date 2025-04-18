@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import * as React from "react";
 import { Controller } from "react-hook-form";
+import ProductImagesCell from "@/app/components/ProductImagesCell"
 import
 {
   Pencil,
@@ -252,46 +253,7 @@ function Product ()
       header: "Images",
       cell: ( { row } ) => {
         const productId = row.getValue("id");
-        const [productImages, setProductImages] = useState([]);
-        
-        useEffect(() => {
-          const fetchProductImages = async () => {
-            const { data, error } = await supabase
-              .from("productImages")
-              .select("prod_images")
-              .eq("prod_id", productId);
-              
-            if (!error && data) {
-              setProductImages(data.map(item => item.prod_images));
-            }
-          };
-          
-          fetchProductImages();
-        }, [productId]);
-        
-        return (
-          <div className="flex items-center space-x-2">
-            {productImages.length > 0 ? (
-              <div className="flex -space-x-2">
-                {productImages.slice(0, 2).map((image, index) => (
-                  <img 
-                    key={index} 
-                    src={image} 
-                    alt={`Product ${index + 1}`} 
-                    className="h-8 w-8 rounded-full object-cover border border-white"
-                  />
-                ))}
-                {productImages.length > 2 && (
-                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium">
-                    +{productImages.length - 2}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <span className="text-gray-400 text-sm">No images</span>
-            )}
-          </div>
-        );
+        return <ProductImagesCell productId={productId} />;
       },
     },
     {
