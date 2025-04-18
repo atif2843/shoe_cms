@@ -47,7 +47,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="h-screen">
       <SidebarContent>
         <SidebarGroup className="flex items-center justify-center h-16 bg-gray-800 text-white">
-          <h1 className="text-xl font-bold">CMS</h1>
+          <h1 className="text-xl font-bold">Kicksneak</h1>
         </SidebarGroup>
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Application</SidebarGroupLabel>}
