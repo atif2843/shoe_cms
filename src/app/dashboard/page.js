@@ -71,23 +71,53 @@ function Dashboard() {
           { count: usersCount }
         ] = await Promise.all([
           supabase.from('products').select('*', { count: 'exact', head: true }),
-          supabase.from('enquiries').select('*', { count: 'exact', head: true }),
+          supabase.from('Order_details').select('*', { count: 'exact', head: true }),
           supabase.from('users').select('*', { count: 'exact', head: true })
         ]);
 
-        // Fetch recent orders
-        const { data: recentOrders } = await supabase
-          .from('enquiries')
+        // Fetch recent pending orders from Order_details
+        const { data: orderDetails } = await supabase
+          .from('Order_details')
           .select(`
-            id,
+            order_id,
             name,
-            email,
-            phone,
-            message,
-            created_at
+            color,
+            size,
+            price,
+            created_at,
+            status
           `)
+          .eq('status', 'pending')
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(20);
+
+        // Group orders by order_id
+        const groupedOrders = {};
+        if (orderDetails) {
+          orderDetails.forEach(order => {
+            if (!groupedOrders[order.order_id]) {
+              groupedOrders[order.order_id] = {
+                order_id: order.order_id,
+                created_at: order.created_at,
+                status: order.status,
+                products: [],
+                total_amount: 0
+              };
+            }
+            
+            groupedOrders[order.order_id].products.push({
+              name: order.name,
+              color: order.color,
+              size: order.size,
+              price: order.price
+            });
+            
+            groupedOrders[order.order_id].total_amount += parseFloat(order.price) || 0;
+          });
+        }
+
+        // Convert to array and limit to 5 for display
+        const recentOrders = Object.values(groupedOrders).slice(0, 5);
 
         // Fetch popular products
         const { data: recentAddedProducts } = await supabase
@@ -110,24 +140,20 @@ function Dashboard() {
           .order('stock', { ascending: true })
           .limit(5);
 
-        // Calculate total revenue
-        const { data: allOrders } = await supabase
-          .from('enquiries')
-          .select('total');
+        // Calculate total revenue from Order_details
+        const { data: allOrderDetails } = await supabase
+          .from('Order_details')
+          .select('price, status')
+          .eq('status', 'Delivered');
         
-        const totalRevenue = allOrders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+        const totalRevenue = allOrderDetails?.reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0) || 0;
 
         setStats({
           totalProducts: productsCount || 0,
           totalOrders: ordersCount || 0,
           totalUsers: usersCount || 0,
           totalRevenue: totalRevenue,
-          recentOrders: recentOrders?.map(order => ({
-            id: order.id,
-            users: { name: order.name },
-            status: order.status || 'pending',
-            total: order.total || 0
-          })) || [],
+          recentOrders: recentOrders,
           recentAddedProducts: recentAddedProducts?.map(product => ({
             product_id: product.id,
             products: { 
@@ -153,7 +179,7 @@ function Dashboard() {
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR'
     }).format(amount);
@@ -161,12 +187,11 @@ function Dashboard() {
 
   const getOrderStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'processing': return 'bg-blue-500';
-      case 'shipped': return 'bg-green-500';
-      case 'delivered': return 'bg-green-700';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'Pending': return 'bg-gray-100 text-gray-800';
+      case 'Confirmed': return 'bg-blue-100 text-blue-800';
+      case 'Dispatched': return 'bg-yellow-100 text-yellow-800';
+      case 'Delivered': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -242,10 +267,13 @@ function Dashboard() {
       {/* Recent Orders & Popular Products */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between border-b">
             <CardTitle>Recent Orders</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/orders">View All Orders</a>
+            </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -253,38 +281,37 @@ function Dashboard() {
                 ))}
               </div>
             ) : stats.recentOrders.length > 0 ? (
-              <div className="space-y-4">
-                {stats.recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between">
+              <div className="space-y-0">
+                {stats.recentOrders.map((order, index) => (
+                  <div key={order.order_id} className={`flex items-center justify-between py-3 ${index !== stats.recentOrders.length - 1 ? 'border-b' : ''}`}>
                     <div>
-                      <p className="font-medium">Order #{order.id}</p>
+                      <p className="font-medium">Order #<br/>{order.order_id} ({order.products.length} item{order.products.length !== 1 ? 's' : ''})</p>
                       <p className="text-sm text-muted-foreground">
-                        {order.users?.name || 'Unknown User'}
+                        <Badge className={getOrderStatusColor(order.status)}>
+                          {order.status}
+                        </Badge> / {new Date(order.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge className={getOrderStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
-                      <span className="font-medium">{formatCurrency(order.total || 0)}</span>
+                      <span className="font-medium">{formatCurrency(order.total_amount)}</span>
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full mt-4" asChild>
-                  <a href="/orders">View All Orders</a>
-                </Button>
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-4">No recent orders</p>
+              <p className="text-center text-muted-foreground py-4">No pending orders</p>
             )}
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between border-b">
             <CardTitle>Recent Added Products</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/products">View All Products</a>
+            </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -292,9 +319,9 @@ function Dashboard() {
                 ))}
               </div>
             ) : stats.recentAddedProducts.length > 0 ? (
-              <div className="space-y-4">
-                {stats.recentAddedProducts.map((item) => (
-                  <div key={item.product_id} className="flex items-center justify-between">
+              <div className="space-y-0">
+                {stats.recentAddedProducts.map((item, index) => (
+                  <div key={item.product_id} className={`flex items-center justify-between py-3 ${index !== stats.recentAddedProducts.length - 1 ? 'border-b' : ''}`}>
                     <div>
                       <p className="font-medium">{item.products?.name || 'Unknown Product'}</p>
                       {/*<p className="text-sm text-muted-foreground">
@@ -307,9 +334,6 @@ function Dashboard() {
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full mt-4" asChild>
-                  <a href="/products">View All Products</a>
-                </Button>
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-4">No popular products data</p>
@@ -318,72 +342,7 @@ function Dashboard() {
         </Card>
       </div>
       
-      {/* Low Stock Alerts */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-            Low Stock Alerts
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : stats.lowStockProducts.length > 0 ? (
-            <div className="space-y-4">
-              {stats.lowStockProducts.map((product) => (
-                <div key={product.id} className="flex items-center justify-between">
-                  <div className="w-full">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-medium">{product.name}</p>
-                      <span className="text-sm font-medium">{product.stock} in stock</span>
-                    </div>
-                    <Progress value={(product.stock / 10) * 100} className="h-2" />
-                  </div>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full mt-4" asChild>
-                <a href="/products">Manage Inventory</a>
-              </Button>
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-4">No low stock products</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Button className="h-24 flex flex-col items-center justify-center gap-2" asChild>
-          <a href="/products/new">
-            <Package className="h-6 w-6" />
-            <span>Add New Product</span>
-          </a>
-        </Button>
-        <Button className="h-24 flex flex-col items-center justify-center gap-2" asChild>
-          <a href="/orders">
-            <ShoppingCart className="h-6 w-6" />
-            <span>Process Orders</span>
-          </a>
-        </Button>
-        <Button className="h-24 flex flex-col items-center justify-center gap-2" asChild>
-          <a href="/users">
-            <Users className="h-6 w-6" />
-            <span>Manage Users</span>
-          </a>
-        </Button>
-        <Button className="h-24 flex flex-col items-center justify-center gap-2" asChild>
-          <a href="/categories">
-            <ChartColumnStacked className="h-6 w-6" />
-            <span>Manage Categories</span>
-          </a>
-        </Button>
-      </div>
-    </div>
+         </div>
     </Sidebar>
   );
 }

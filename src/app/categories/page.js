@@ -69,7 +69,7 @@ import
   FormMessage,
 } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "react-hot-toast";
+import SuccessPopup from "@/app/components/SuccessPopup";
 import {
   Dialog,
   DialogContent,
@@ -112,6 +112,16 @@ function Categrories ()
   // Add new state for delete confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
+
+  const showSuccessMessage = (message, type = "success") => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+  };
 
   useEffect( () =>
   {
@@ -269,43 +279,46 @@ function Categrories ()
     {
       try
       {
-        let imageUrl = editItem.image;
-        
-        // If a new image is selected, upload it
-        if ( selectedImage )
-        {
-          setIsUploading( true );
-          imageUrl = await uploadImageToSupabase( selectedImage, editItem.id );
-          setIsUploading( false );
-        }
-
         // Generate slug from category name
         const slug = values.categories.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+        // First update the category
         const { error } = await supabase
           .from( "categories" )
           .update( { 
             name: values.categories, 
             status: values.status,
-            image: imageUrl,
             slug: slug
           } )
           .eq( "id", editItem.id );
 
-        if ( !error )
-        {
-          fetchCategories();
-          setEditItem( null );
-          form.reset();
-          setSelectedStatus( "" );
-          setSelectedImage( null );
-          setImagePreview( null );
-          toast.success( "Category updated successfully" );
+        if ( error ) throw error;
+
+        // If an image was selected, upload it
+        if ( selectedImage ) {
+          setIsUploading( true );
+          const imageUrl = await uploadImageToSupabase( selectedImage, editItem.id );
+          
+          // Update the category with the image URL
+          const { error: updateError } = await supabase
+            .from( "categories" )
+            .update( { image: imageUrl } )
+            .eq( "id", editItem.id );
+
+          if ( updateError ) throw updateError;
+          setIsUploading( false );
         }
-      } catch ( error )
-      {
+
+        fetchCategories();
+        setEditItem( null );
+        form.reset();
+        setSelectedStatus( "" );
+        setSelectedImage( null );
+        setImagePreview( null );
+        showSuccessMessage("Category updated successfully");
+      } catch ( error ) {
         console.error( 'Error updating category:', error );
-        toast.error( "Failed to update category" );
+        showSuccessMessage("Failed to update category", "error");
       }
     } else
     {
@@ -327,8 +340,7 @@ function Categrories ()
         if ( error ) throw error;
 
         // If an image was selected, upload it
-        if ( selectedImage && data[ 0 ] )
-        {
+        if ( selectedImage && data[ 0 ] ) {
           setIsUploading( true );
           const imageUrl = await uploadImageToSupabase( selectedImage, data[ 0 ].id );
           
@@ -347,11 +359,10 @@ function Categrories ()
         setSelectedStatus( "" );
         setSelectedImage( null );
         setImagePreview( null );
-        toast.success( "Category created successfully" );
-      } catch ( error )
-      {
+        showSuccessMessage("Category created successfully");
+      } catch ( error ) {
         console.error( 'Error creating category:', error );
-        toast.error( "Failed to create category" );
+        showSuccessMessage("Failed to create category", "error");
       }
     }
   };
@@ -398,8 +409,8 @@ function Categrories ()
           }
         }
       }
-      
-      // Delete the category from the database
+
+      // Then delete the category
       const { error } = await supabase
         .from("categories")
         .delete()
@@ -407,12 +418,11 @@ function Categrories ()
         
       if (error) throw error;
       
-      // Refresh the categories list
       fetchCategories();
-      toast.success("Category deleted successfully");
+      showSuccessMessage("Category deleted successfully");
     } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error("Failed to delete category");
+      showSuccessMessage("Failed to delete category", "error");
     }
   };
 
@@ -442,6 +452,12 @@ function Categrories ()
 
   return (
     <Sidebar className="w-full">
+      <SuccessPopup 
+        message={popupMessage}
+        isVisible={showPopup}
+        onClose={() => setShowPopup(false)}
+        type={popupType}
+      />
       <div className="flex gap-4 p-4">
         {/* Add Delete Confirmation Modal */}
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>

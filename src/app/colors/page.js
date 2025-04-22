@@ -77,6 +77,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
+import SuccessPopup from "@/app/components/SuccessPopup";
 
 const formSchema = z.object( {
   color_name: z.string().min( 2, {
@@ -106,6 +107,9 @@ function Colors ()
   const [ loading, setLoading ] = useState( true );
   const [ isDeleteModalOpen, setIsDeleteModalOpen ] = useState( false );
   const [ colorToDelete, setColorToDelete ] = useState( null );
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
 
   useEffect( () =>
   {
@@ -216,10 +220,14 @@ function Colors ()
       
       // Refresh the colors list
       fetchColors();
-      toast.success("Color deleted successfully");
+      setPopupMessage("Color deleted successfully");
+      setPopupType("success");
+      setShowPopup(true);
     } catch (error) {
       console.error('Error deleting color:', error);
-      toast.error("Failed to delete color");
+      setPopupMessage("Failed to delete color");
+      setPopupType("error");
+      setShowPopup(true);
     }
   };
 
@@ -242,8 +250,21 @@ function Colors ()
           })
           .eq("id", editItem.id);
 
-        if (error) throw error;
-        toast.success("Color updated successfully");
+        if (error) {
+          console.error('Error updating color:', error);
+          setPopupMessage("Failed to update color");
+          setPopupType("error");
+          setShowPopup(true);
+          return;
+        }
+        
+        fetchColors();
+        setEditItem(null);
+        form.reset();
+        setSelectedStatus("");
+        setPopupMessage("Color updated successfully");
+        setPopupType("success");
+        setShowPopup(true);
       } else {
         const { error } = await supabase
           .from("colors")
@@ -256,23 +277,26 @@ function Colors ()
             },
           ]);
 
-        if (error) throw error;
-        toast.success("Color added successfully");
-      }
+        if (error) {
+          console.error('Error inserting color:', error);
+          setPopupMessage("Failed to create color");
+          setPopupType("error");
+          setShowPopup(true);
+          return;
+        }
 
-      // Reset form with default values
-      form.reset({
-        color_name: "",
-        hex_code: "#000000",
-        status: "",
-        slug: "",
-      });
-      
-      setEditItem(null);
-      fetchColors();
+        fetchColors();
+        form.reset();
+        setSelectedStatus("");
+        setPopupMessage("Color created successfully");
+        setPopupType("success");
+        setShowPopup(true);
+      }
     } catch (error) {
-      console.error("Error submitting color:", error);
-      toast.error("Failed to save color");
+      console.error('Unexpected error:', error);
+      setPopupMessage("An unexpected error occurred");
+      setPopupType("error");
+      setShowPopup(true);
     }
   };
 
@@ -302,6 +326,12 @@ function Colors ()
 
   return (
     <Sidebar className="w-full">
+      <SuccessPopup 
+        message={popupMessage}
+        isVisible={showPopup}
+        onClose={() => setShowPopup(false)}
+        type={popupType}
+      />
       <div className="flex gap-4 p-4">
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent>

@@ -91,6 +91,7 @@ import
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import SuccessPopup from "@/app/components/SuccessPopup";
 const formSchema = z.object( {
   name: z.string().min( 1, "Name is required" ),
   sku: z.string().min( 1, "SKU is required" ),
@@ -190,6 +191,16 @@ function Product ()
   // Add new state for delete confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
+
+  const showSuccessMessage = (message, type = "success") => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+  };
 
   /*
     const frameworksList = [
@@ -696,8 +707,7 @@ function Product ()
     }
   };
 
-  const onSubmit = async ( values ) =>
-  {
+  const onSubmit = async ( values ) => {
     console.log( values );
     const brandData = {
       name: values.name,
@@ -719,32 +729,39 @@ function Product ()
       slug: generateSlug(values.name),
     };
 
-    if ( editItem )
-    {
+    if ( editItem ) {
+      try {
+        // Update existing brand
+        const { error } = await supabase
+          .from( "products" )
+          .update( brandData )
+          .eq( "id", editItem.id );
 
-      // Update existing brand
-      const { error } = await supabase
-        .from( "products" )
-        .update( brandData )
-        .eq( "id", editItem.id );
+        if ( error ) throw error;
 
-      if ( !error )
-      {
         fetchProducts();
         setEditItem( null );
         form.reset();
         setSelectedStatus( "" );
+        showSuccessMessage("Product updated successfully");
+      } catch (error) {
+        console.error('Error updating product:', error);
+        showSuccessMessage("Failed to update product", "error");
       }
-    } else
-    {
-      // Insert new brand
-      const { error } = await supabase.from( "products" ).insert( [ brandData ] );
+    } else {
+      try {
+        // Insert new brand
+        const { error } = await supabase.from( "products" ).insert( [ brandData ] );
 
-      if ( !error )
-      {
+        if ( error ) throw error;
+
         fetchProducts(); // Refresh the list
         form.reset();
         setSelectedStatus( "" );
+        showSuccessMessage("Product created successfully");
+      } catch (error) {
+        console.error('Error creating product:', error);
+        showSuccessMessage("Failed to create product", "error");
       }
     }
   };
@@ -959,8 +976,10 @@ function Product ()
 
       // Refresh the products list
       fetchProducts();
+      showSuccessMessage("Product deleted successfully");
     } catch (error) {
       console.error("Error in deleteProduct:", error);
+      showSuccessMessage("Failed to delete product", "error");
     }
   };
 
@@ -979,6 +998,12 @@ function Product ()
 
   return (
     <Sidebar className="w-full">
+      <SuccessPopup 
+        message={popupMessage}
+        isVisible={showPopup}
+        onClose={() => setShowPopup(false)}
+        type={popupType}
+      />
       <div className="flex flex-col gap-4 p-4">
         {/* Add Delete Confirmation Modal */}
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>

@@ -12,7 +12,7 @@ import {
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 
-const ActionsCell = ({ user }) => {
+const ActionsCell = ({ user, onDelete }) => {
 const [isDeleting, setIsDeleting] = useState(false);
 
       const handleDelete = async () => {
@@ -25,11 +25,13 @@ const [isDeleting, setIsDeleting] = useState(false);
 
           if (error) throw error;
           
-          toast.success('User deleted successfully');
+          // Call the onDelete callback with success message
+          if (onDelete) onDelete(true, 'User deleted successfully');
           // Refresh the table data
           window.location.reload();
         } catch (error) {
-          toast.error('Error deleting user');
+          // Call the onDelete callback with error message
+          if (onDelete) onDelete(false, 'Error deleting user');
           console.error('Error:', error);
         } finally {
           setIsDeleting(false);
@@ -48,23 +50,33 @@ const [isDeleting, setIsDeleting] = useState(false);
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(user.id)}
-              className="flex justify-between"
             >
-              Edit
-              <Pencil />
+              Copy user ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex justify-between text-red-600"
+            <DropdownMenuItem>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={handleDelete}
+              className="text-red-600"
               disabled={isDeleting}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-              <Trash2 />
+              {isDeleting ? (
+                <>
+                  <span className="mr-2">Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </>
+              )}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
-};
+    };
 
-export default ActionsCell
+export default ActionsCell;

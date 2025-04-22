@@ -10,6 +10,7 @@ import { Pencil, Trash2, X } from "lucide-react";
 import { supabase } from "./../lib/supabaseClient";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import SuccessPopup from "@/app/components/SuccessPopup";
 import
 {
   Select,
@@ -103,6 +104,9 @@ function Brands ()
   const [ existingImageUrl, setExistingImageUrl ] = useState( null );
   const [ backgroundImagePreview, setBackgroundImagePreview ] = useState( null );
   const [ existingBackgroundImageUrl, setExistingBackgroundImageUrl ] = useState( null );
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
 
   useEffect( () =>
   {
@@ -197,7 +201,9 @@ function Brands ()
                         
                       if (imageDeleteError) {
                         console.error("Error deleting image from storage:", imageDeleteError);
-                        toast.error("Error deleting image from storage. Please try again.");
+                        setPopupMessage("Error deleting image from storage. Please try again.");
+                        setPopupType("error");
+                        setShowPopup(true);
                         return;
                       }
                     }
@@ -213,7 +219,9 @@ function Brands ()
                         
                       if (bgImageDeleteError) {
                         console.error("Error deleting background image from storage:", bgImageDeleteError);
-                        toast.error("Error deleting background image from storage. Please try again.");
+                        setPopupMessage("Error deleting background image from storage. Please try again.");
+                        setPopupType("error");
+                        setShowPopup(true);
                         return;
                       }
                     }
@@ -223,15 +231,21 @@ function Brands ()
                     
                     if (dbError) {
                       console.error("Error deleting brand record:", dbError);
-                      toast.error("Error deleting brand. Please try again.");
+                      setPopupMessage("Error deleting brand. Please try again.");
+                      setPopupType("error");
+                      setShowPopup(true);
                       return;
                     }
                     
-                    toast.success("Brand deleted successfully");
+                    setPopupMessage("Brand deleted successfully");
+                    setPopupType("success");
+                    setShowPopup(true);
                     fetchBrands();
                   } catch (error) {
                     console.error("Unexpected error in delete operation:", error);
-                    toast.error("An unexpected error occurred while deleting the brand. Please try again.");
+                    setPopupMessage("An unexpected error occurred while deleting the brand. Please try again.");
+                    setPopupType("error");
+                    setShowPopup(true);
                   }
                 } }
               >
@@ -408,12 +422,16 @@ const onSubmit = async (values) => {
       if (error) {
         console.error("Error updating brand:", error);
         console.error("Error details:", JSON.stringify(error, null, 2));
-        toast.error("Error updating brand. Please try again.");
+        setPopupMessage("Error updating brand. Please try again.");
+        setPopupType("error");
+        setShowPopup(true);
         return;
       }
       
       console.log("Brand updated successfully:", data);
-      toast.success("Brand updated successfully");
+      setPopupMessage("Brand updated successfully");
+      setPopupType("success");
+      setShowPopup(true);
     } else {
       console.log("Inserting new brand");
       
@@ -433,12 +451,16 @@ const onSubmit = async (values) => {
       if (error) {
         console.error("Error inserting brand:", error);
         console.error("Error details:", JSON.stringify(error, null, 2));
-        toast.error("Error creating brand. Please try again.");
+        setPopupMessage("Error creating brand. Please try again.");
+        setPopupType("error");
+        setShowPopup(true);
         return;
       }
       
       console.log("Brand inserted successfully:", data);
-      toast.success("Brand created successfully");
+      setPopupMessage("Brand created successfully");
+      setPopupType("success");
+      setShowPopup(true);
     }
 
     fetchBrands();
@@ -465,7 +487,9 @@ const onSubmit = async (values) => {
     setExistingBackgroundImageUrl(null);
   } catch (error) {
     console.error("Unexpected error in onSubmit:", error);
-    toast.error("An unexpected error occurred. Please try again.");
+    setPopupMessage("An unexpected error occurred. Please try again.");
+    setPopupType("error");
+    setShowPopup(true);
   }
 };
 
@@ -585,6 +609,12 @@ const onSubmit = async (values) => {
 
   return (
     <Sidebar className="w-full">
+      <SuccessPopup 
+        message={popupMessage}
+        isVisible={showPopup}
+        onClose={() => setShowPopup(false)}
+        type={popupType}
+      />
       <div className="flex gap-4 p-4">
         <div className="w-1/2">
           <Form { ...form }>

@@ -77,6 +77,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
+import SuccessPopup from "@/app/components/SuccessPopup";
 
 const formSchema = z.object( {
   sizes: z.string().min( 2, {
@@ -105,6 +106,9 @@ function Sizes ()
   const [ loading, setLoading ] = useState( true );
   const [ isDeleteModalOpen, setIsDeleteModalOpen ] = useState( false );
   const [ sizeToDelete, setSizeToDelete ] = useState( null );
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
 
   useEffect( () =>
   {
@@ -208,43 +212,65 @@ function Sizes ()
       if (error) throw error;
       
       fetchSizes();
-      toast.success("Size deleted successfully");
+      setPopupMessage("Size deleted successfully");
+      setPopupType("success");
+      setShowPopup(true);
     } catch (error) {
       console.error('Error deleting size:', error);
-      toast.error("Failed to delete size");
+      setPopupMessage("Failed to delete size");
+      setPopupType("error");
+      setShowPopup(true);
     }
   };
 
-  const onSubmit = async ( values ) =>
-  {
-    if ( editItem )
-    {
-      const { error } = await supabase
-        .from( "sizes" )
-        .update( { size: values.sizes, status: values.status } )
-        .eq( "id", editItem.id );
-      if ( !error )
-      {
+  const onSubmit = async (values) => {
+    try {
+      if (editItem) {
+        const { error } = await supabase
+          .from("sizes")
+          .update({ size: values.sizes, status: values.status })
+          .eq("id", editItem.id);
+          
+        if (error) {
+          console.error('Error updating size:', error);
+          setPopupMessage("Failed to update size");
+          setPopupType("error");
+          setShowPopup(true);
+          return;
+        }
+        
         fetchSizes();
-        setEditItem( null );
+        setEditItem(null);
         form.reset();
-        setSelectedStatus( "" );
-      }
-    } else
-    {
+        setSelectedStatus("");
+        setPopupMessage("Size updated successfully");
+        setPopupType("success");
+        setShowPopup(true);
+      } else {
+        const { error } = await supabase
+          .from("sizes")
+          .insert([{ size: values.sizes, status: values.status }]);
 
-      const { error } = await supabase
-        .from( "sizes" )
-        .insert( [ { size: values.sizes, status: values.status } ] );
+        if (error) {
+          console.error('Error inserting size:', error);
+          setPopupMessage("Failed to create size");
+          setPopupType("error");
+          setShowPopup(true);
+          return;
+        }
 
-
-
-      if ( !error )
-      {
-        fetchSizes(); // Refresh the full list instead of adding manually
+        fetchSizes();
         form.reset();
-        setSelectedStatus( "" );
+        setSelectedStatus("");
+        setPopupMessage("Size created successfully");
+        setPopupType("success");
+        setShowPopup(true);
       }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      setPopupMessage("An unexpected error occurred");
+      setPopupType("error");
+      setShowPopup(true);
     }
   };
 
@@ -275,6 +301,12 @@ function Sizes ()
 
   return (
     <Sidebar className="w-full">
+      <SuccessPopup 
+        message={popupMessage}
+        isVisible={showPopup}
+        onClose={() => setShowPopup(false)}
+        type={popupType}
+      />
       <div className="flex gap-4 p-4">
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent>
