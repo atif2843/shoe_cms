@@ -772,7 +772,7 @@ function Product ()
   const [ rowSelection, setRowSelection ] = React.useState( {} );
   const [ pagination, setPagination ] = React.useState( {
     pageIndex: 0,
-    pageSize: 5, // Increased from default 10 to 50
+    pageSize: 10, // Increased from default 10 to 50
   } );
 
   const table = useReactTable( {
