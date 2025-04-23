@@ -162,7 +162,7 @@ function Product ()
 
   // Function to generate slug from product name
   const generateSlug = (productName) => {
-    return productName.replace(/\s+/g, '-');
+    return productName.toLowerCase().replace(/\s+/g, '-');
   };
 
   const [ products, setProducts ] = useState( [] );
@@ -770,6 +770,10 @@ function Product ()
   const [ columnFilters, setColumnFilters ] = React.useState( [] );
   const [ columnVisibility, setColumnVisibility ] = React.useState( {} );
   const [ rowSelection, setRowSelection ] = React.useState( {} );
+  const [ pagination, setPagination ] = React.useState( {
+    pageIndex: 0,
+    pageSize: 5, // Increased from default 10 to 50
+  } );
 
   const table = useReactTable( {
     data: products,
@@ -779,11 +783,13 @@ function Product ()
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
