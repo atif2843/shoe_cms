@@ -1351,12 +1351,12 @@ function Product ()
                   name={ fieldName }
                   render={ ( { field } ) => (
                     <FormItem className="w-full">
-                      <FormLabel className="capitalize">{ fieldName }</FormLabel>
+                      <FormLabel className="capitalize text-lg font-medium">{ fieldName }</FormLabel>
                       <FormControl>
                         <TiptapEditor
                           value={ field.value }
                           onChange={ field.onChange }
-                          className="w-full h-full"
+                          className="w-full h-full border border-gray-300 rounded-md"
                         />
                       </FormControl>
                       <FormMessage />

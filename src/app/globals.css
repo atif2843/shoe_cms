@@ -120,3 +120,170 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add these styles for the TiptapEditor content */
+.prose {
+  max-width: 100%;
+}
+ 
+.prose p {
+  margin-bottom: 1em;
+  margin-left: .25em;
+}
+ 
+.prose h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+ 
+.prose h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+ 
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+ 
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+ 
+.prose li {
+  margin-bottom: 0.5em;
+  display: list-item;
+  margin-left: 1em;
+}
+ 
+.prose li::marker {
+  color: #4b5563;
+  font-weight: 500;
+}
+ 
+.prose ul li::marker {
+  content: "•";
+ 
+}
+ 
+.prose ol li::marker {
+  content: counter(list-item) ".";
+}
+ 
+.prose blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  font-style: italic;
+  margin: 1em 0;
+}
+ 
+.prose code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-family: monospace;
+}
+ 
+.prose pre {
+  background-color: #f3f4f6;
+  padding: 1em;
+  border-radius: 0.25em;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+ 
+.prose a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+ 
+.prose a:hover {
+  color: #2563eb;
+}
+ 
+/* Add styles for the editor toolbar */
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+ 
+.tiptap-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.25rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+ 
+.tiptap-toolbar button:hover {
+  background-color: #f3f4f6;
+}
+ 
+.tiptap-toolbar button.is-active {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+ 
+/* Add styles for the editor content area */
+.tiptap-content {
+  padding: 1rem;
+  min-height: 200px;
+  outline: none;
+  cursor: text;
+  position: relative;
+  z-index: 1;
+}
+ 
+.tiptap-content:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+ 
+/* Fix for editor content area to ensure it's clickable */
+.tiptap-content .ProseMirror {
+  min-height: 200px;
+  height: 100%;
+  width: 100%;
+  outline: none;
+  cursor: text;
+  position: relative;
+  z-index: 1;
+}
+ 
+/* Ensure paragraphs and other elements are clickable */
+.tiptap-content .ProseMirror p,
+.tiptap-content .ProseMirror h1,
+.tiptap-content .ProseMirror h2,
+.tiptap-content .ProseMirror ul,
+.tiptap-content .ProseMirror ol,
+.tiptap-content .ProseMirror blockquote,
+.tiptap-content .ProseMirror pre {
+  cursor: text;
+  position: relative;
+  z-index: 1;
+}
+ 
+/* Wrapper for the editor content */
+.tiptap-content-wrapper {
+  position: relative;
+  min-height: 200px;
+  width: 100%;
+  overflow: auto;
+}

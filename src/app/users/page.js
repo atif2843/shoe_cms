@@ -167,7 +167,7 @@ function UsersPage() {
         const { error } = await supabase
           .from("users")
           .update(values)
-          .eq("uid", editingUser.uid);
+          .eq("id", editingUser.id);
         
         if (error) throw error;
         showMessage("User updated successfully");
@@ -330,6 +330,13 @@ function UsersPage() {
       ),
       enableSorting: false,
       enableHiding: false,
+    },
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <div className="font-mono text-xs">{row.getValue("id")}</div>
+      ),
     },
     {
       accessorKey: "uid",
@@ -524,11 +531,12 @@ function UsersPage() {
                   </FormItem>
                 )}
               />
+              <div className="flex gap-2 w-full justify-between">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input {...field} />
@@ -541,7 +549,7 @@ function UsersPage() {
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input {...field} type="email" />
@@ -550,43 +558,33 @@ function UsersPage() {
                   </FormItem>
                 )}
               />
+              </div>
+              <div className="flex gap-2 w-full justify-between">
               <FormField
                 control={form.control}
                 name="phone"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
                     <FormLabel>Phone</FormLabel>
-                    <FormControl>
+                    <FormControl >
                       <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
+
+            <FormField
+                control={form.control}      
                 name="status"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
                     <FormLabel>Status</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
-                      <FormControl>
+                      <FormControl className="w-full">
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
@@ -600,6 +598,21 @@ function UsersPage() {
                   </FormItem>
                 )}
               />
+              </div>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+             
               <DialogFooter>
                 <Button
                   type="button"
