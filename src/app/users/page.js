@@ -67,12 +67,23 @@ import { supabase } from "./../lib/supabaseClient";
 import { useEffect, useState } from "react";
 import * as XLSX from 'xlsx';
 import SuccessPopup from "@/app/components/SuccessPopup";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // Schema
 const formSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+  uid: z.string().optional(),
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
   }),
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  phone: z.string().min(10, {
+    message: "Phone number must be at least 10 characters.",
+  }),
+  address: z.string().optional(),
+  status: z.string().default("active"),
 });
 
 function UsersPage() {
@@ -88,6 +99,98 @@ function UsersPage() {
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [rowSelection, setRowSelection] = React.useState({});
+  
+  // New state variables for user form
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Initialize form
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      uid: "",
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      status: "active",
+    },
+  });
+
+  // Function to generate a unique ID
+  const generateUid = () => {
+    return 'uid_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  };
+
+  // Function to show success/error message
+  const showMessage = (message, type = "success") => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+  };
+
+  // Function to open the user modal for creating a new user
+  const openAddUserModal = () => {
+    form.reset({
+      uid: generateUid(),
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      status: "active",
+    });
+    setEditingUser(null);
+    setIsUserModalOpen(true);
+  };
+
+  // Function to open the user modal for editing an existing user
+  const openEditUserModal = (user) => {
+    form.reset({
+      uid: user.uid || generateUid(),
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      address: user.address || "",
+      status: user.status || "active",
+    });
+    setEditingUser(user);
+    setIsUserModalOpen(true);
+  };
+
+  // Function to handle form submission
+  const onSubmit = async (values) => {
+    setIsSubmitting(true);
+    try {
+      if (editingUser) {
+        // Update existing user
+        const { error } = await supabase
+          .from("users")
+          .update(values)
+          .eq("uid", editingUser.uid);
+        
+        if (error) throw error;
+        showMessage("User updated successfully");
+      } else {
+        // Create new user
+        const { error } = await supabase
+          .from("users")
+          .insert([values]);
+        
+        if (error) throw error;
+        showMessage("User created successfully");
+      }
+      
+      // Refresh users list
+      fetchUsers();
+      setIsUserModalOpen(false);
+    } catch (error) {
+      console.error("Error saving user:", error);
+      showMessage(error.message || "Failed to save user", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDeleteClick = (user) => {
     setUserToDelete(user);
@@ -229,6 +332,13 @@ function UsersPage() {
       enableHiding: false,
     },
     {
+      accessorKey: "uid",
+      header: "UID",
+      cell: ({ row }) => (
+        <div className="font-mono text-xs">{row.getValue("uid")}</div>
+      ),
+    },
+    {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
@@ -282,6 +392,12 @@ function UsersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => openEditUserModal(user)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => handleDeleteClick(user)}
@@ -384,6 +500,130 @@ function UsersPage() {
         </div>
       )}
       
+      {/* User Form Modal */}
+      <Dialog open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="uid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>UID</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled />
+                    </FormControl>
+                    <FormDescription>
+                      Unique identifier for the user (auto-generated)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsUserModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {editingUser ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    editingUser ? "Update" : "Create"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
       <div className="flex gap-4 p-4">
         <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4">
           <div className="w-full">
@@ -397,6 +637,15 @@ function UsersPage() {
                 className="max-w-sm"
               />
               <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={openAddUserModal}
+                  className="flex items-center gap-2"
+                >
+                  <UserCircle className="h-4 w-4" />
+                  Add User
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
