@@ -919,67 +919,76 @@ function Product ()
       console.error("Error in updateImageColor:", error);
     }
   };
-
   const deleteProduct = async (productId) => {
     try {
-      // First, get all images associated with this product
+      // Delete all references to the product in the wishlist table
+      const { error: wishlistDeleteError } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("product_id", productId);
+  
+      if (wishlistDeleteError) {
+        console.error("Error deleting product from wishlist:", wishlistDeleteError);
+        return;
+      }
+  
+      // Fetch all images associated with this product
       const { data: productImages, error: fetchError } = await supabase
         .from("productImages")
         .select("prod_images")
         .eq("prod_id", productId);
-
+  
       if (fetchError) {
         console.error("Error fetching product images:", fetchError);
         return;
       }
-
-      // Delete the entire product folder from storage
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from("productsimages")
-        .list(`${productId}/`);
-
-      if (storageError) {
-        console.error("Error listing storage files:", storageError);
-        return;
-      }
-
-      if (storageData && storageData.length > 0) {
-        // Get all file paths in the product folder
-        const filePaths = storageData.map(file => `${productId}/${file.name}`);
-        
-        // Delete all files in the folder
-        const { error: deleteError } = await supabase.storage
+  
+      // If there are images, delete them from storage
+      if (productImages && productImages.length > 0) {
+        const { data: storageData, error: storageError } = await supabase.storage
           .from("productsimages")
-          .remove(filePaths);
-
-        if (deleteError) {
-          console.error("Error deleting files from storage:", deleteError);
+          .list(`${productId}/`);
+  
+        if (storageError) {
+          console.error("Error listing storage files:", storageError);
+          return;
+        }
+  
+        if (storageData && storageData.length > 0) {
+          const filePaths = storageData.map(file => `${productId}/${file.name}`);
+          const { error: deleteError } = await supabase.storage
+            .from("productsimages")
+            .remove(filePaths);
+  
+          if (deleteError) {
+            console.error("Error deleting files from storage:", deleteError);
+            return;
+          }
+        }
+  
+        // Delete image records from the database
+        const { error: imagesDeleteError } = await supabase
+          .from("productImages")
+          .delete()
+          .eq("prod_id", productId);
+  
+        if (imagesDeleteError) {
+          console.error("Error deleting image records:", imagesDeleteError);
           return;
         }
       }
-
-      // Delete all image records from productImages table
-      const { error: imagesDeleteError } = await supabase
-        .from("productImages")
-        .delete()
-        .eq("prod_id", productId);
-
-      if (imagesDeleteError) {
-        console.error("Error deleting image records:", imagesDeleteError);
-        return;
-      }
-
-      // Finally, delete the product record
+  
+      // Delete the product record
       const { error: productDeleteError } = await supabase
         .from("products")
         .delete()
         .eq("id", productId);
-
+  
       if (productDeleteError) {
         console.error("Error deleting product:", productDeleteError);
         return;
       }
-
+  
       // Refresh the products list
       fetchProducts();
       showSuccessMessage("Product deleted successfully");
